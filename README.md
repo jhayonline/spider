@@ -82,7 +82,7 @@ The scraper is intentionally decoupled from Phoenix Mall, running as an independ
 
 ```text
 src/
-├── analytics/              # Market analysis and intelligence generation
+├── analytics/             # Market analysis and intelligence generation
 │   ├── mod.rs             # Module exports and public interface
 │   ├── price_engine.rs    # Statistical price analysis, market averages, percentile calculations
 │   └── recommendations.rs # Seller-facing recommendations and insight formatting
