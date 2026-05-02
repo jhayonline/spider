@@ -5,8 +5,8 @@ use std::env;
 pub struct Config {
     pub phoenix_api_url: String,
     pub phoenix_api_token: String,
-    pub request_delay_ms: u64,
-    pub max_concurrent_requests: usize,
+    pub _request_delay_ms: u64,
+    pub _max_concurrent_requests: usize,
     pub user_agent: String,
 }
 
@@ -19,10 +19,10 @@ impl Config {
                 .unwrap_or_else(|_| "http://localhost:5150".to_string()),
             phoenix_api_token: env::var("PHOENIX_API_TOKEN")
                 .expect("PHOENIX_API_TOKEN must be set"),
-            request_delay_ms: env::var("REQUEST_DELAY_MS")
+            _request_delay_ms: env::var("REQUEST_DELAY_MS")
                 .unwrap_or_else(|_| "1000".to_string())
                 .parse()?,
-            max_concurrent_requests: env::var("MAX_CONCURRENT_REQUESTS")
+            _max_concurrent_requests: env::var("MAX_CONCURRENT_REQUESTS")
                 .unwrap_or_else(|_| "3".to_string())
                 .parse()?,
             user_agent: env::var("USER_AGENT").unwrap_or_else(|_| {

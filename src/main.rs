@@ -13,7 +13,7 @@ use clients::phoenix::PhoenixClient;
 async fn main() -> Result<()> {
     // Initialize logging
     let filter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("spider=debug"));
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("spider=info"));
     fmt().with_env_filter(filter).init();
 
     tracing::info!("Starting Spider Intelligence Engine");
@@ -54,19 +54,15 @@ async fn main() -> Result<()> {
 
         if let Some(stats) = PriceEngine::calculate_statistics_no_outliers(&prices) {
             tracing::info!("Market Analysis:");
-            tracing::info!("  Average: GHS {}", stats.mean);
+            tracing::info!("  Average: GHS {}", stats.mean.round_dp(2));
             tracing::info!("  Median: GHS {}", stats.median);
             tracing::info!("  Range: GHS {} - GHS {}", stats.min, stats.max);
+            if stats.outliers_removed > 0 {
+                tracing::info!("  Outliers removed: {}", stats.outliers_removed);
+            }
 
             // Send to Phoenix Mall
-            let result = phoenix
-                .send_batch_intel(
-                    competitor_listings,
-                    vec![], // For now, empty analysis
-                )
-                .await;
-
-            match result {
+            match phoenix.send_batch_intel(competitor_listings).await {
                 Ok(_) => tracing::info!("Data sent to Phoenix Mall successfully"),
                 Err(e) => tracing::error!("Failed to send to Phoenix Mall: {}", e),
             }
