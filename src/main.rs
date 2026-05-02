@@ -1,23 +1,21 @@
-use reqwest;
-use scraper::{Html, Selector};
+use anyhow::Result;
+use tracing_subscriber;
+
+mod clients;
+mod config;
+mod models;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://jiji.com.gh/mobile-phones";
+async fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter("spider=debug")
+        .init();
 
-    let response = reqwest::get(url).await?.text().await?;
+    tracing::info!("Starting Spider Intelligence Engine");
 
-    let document = Html::parse_document(&response);
+    let config = config::Config::from_env()?;
+    tracing::debug!("Configuration Loaded: {:?}", config);
 
-    let title_selector = Selector::parse("title").unwrap();
-
-    let title = document
-        .select(&title_selector)
-        .next()
-        .map(|el| el.inner_html())
-        .unwrap_or("No title found".to_string());
-
-    println!("TITLE: {}", title);
-
+    tracing::info!("Spider Shutdown Complete");
     Ok(())
 }
