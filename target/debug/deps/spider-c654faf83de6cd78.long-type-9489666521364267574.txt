@@ -1,2 +1,0 @@
-models::intel::_::<impl models::competitor::_::_serde::Deserialize<'de> for models::intel::MarketIntel>::deserialize::__Field
-models::intel::_::<impl models::competitor::_::_serde::Deserialize<'de> for models::intel::PriceRecommendation>::deserialize::__Field

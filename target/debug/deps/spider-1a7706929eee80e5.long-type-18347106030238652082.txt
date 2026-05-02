@@ -1,1 +1,0 @@
-&dyn std::future::Future<Output = std::result::Result<(), std::boxed::Box<dyn std::error::Error>>>
