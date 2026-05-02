@@ -25,11 +25,16 @@ async fn main() -> Result<()> {
     // Initialize Phoenix client
     let phoenix = PhoenixClient::new(&config);
 
-    // Scrape Jiji
+    // Scrape Jiji with pagination (3 pages = ~72 listings)
     let scraper = JijiScraper::new(&config.user_agent);
-    let listings: Vec<models::ScrapedListing> = scraper.scrape_category("mobile-phones").await?;
+    let max_pages = 3;
 
-    tracing::info!("Scraped {} listings", listings.len());
+    tracing::info!("Scraping up to {} pages from Jiji", max_pages);
+    let listings = scraper
+        .scrape_category_paginated("mobile-phones", max_pages)
+        .await?;
+
+    tracing::info!("Scraped {} total listings", listings.len());
 
     // Prepare competitor listings for API
     let competitor_listings: Vec<models::CompetitorListing> = listings
@@ -46,6 +51,11 @@ async fn main() -> Result<()> {
         })
         .collect();
 
+    tracing::info!(
+        "Prepared {} competitor listings with prices",
+        competitor_listings.len()
+    );
+
     // Analyze prices
     let prices: Vec<rust_decimal::Decimal> = listings.iter().filter_map(|l| l.price).collect();
 
@@ -53,12 +63,12 @@ async fn main() -> Result<()> {
         use analytics::PriceEngine;
 
         if let Some(stats) = PriceEngine::calculate_statistics_no_outliers(&prices) {
-            tracing::info!("Market Analysis:");
-            tracing::info!("  Average: GHS {}", stats.mean.round_dp(2));
-            tracing::info!("  Median: GHS {}", stats.median);
-            tracing::info!("  Range: GHS {} - GHS {}", stats.min, stats.max);
+            tracing::info!("Market Analysis (based on {} listings):", stats.count);
+            tracing::info!("  Average Price: GHS {}", stats.mean.round_dp(2));
+            tracing::info!("  Median Price: GHS {}", stats.median);
+            tracing::info!("  Price Range: GHS {} - GHS {}", stats.min, stats.max);
             if stats.outliers_removed > 0 {
-                tracing::info!("  Outliers removed: {}", stats.outliers_removed);
+                tracing::info!("  Outliers Removed: {}", stats.outliers_removed);
             }
 
             // Send to Phoenix Mall
@@ -67,6 +77,8 @@ async fn main() -> Result<()> {
                 Err(e) => tracing::error!("Failed to send to Phoenix Mall: {}", e),
             }
         }
+    } else {
+        tracing::warn!("No valid prices found in scraped listings");
     }
 
     tracing::info!("Spider shutdown complete");
