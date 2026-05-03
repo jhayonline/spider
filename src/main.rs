@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
 
     // Scrape multiple categories
     let scraper = JijiScraper::new(&config.user_agent);
-    let max_pages = 3; // Pages per category
+    let max_pages = config.max_pages_per_category;
 
     let mut all_competitor_listings = Vec::new();
     let mut total_listings = 0;

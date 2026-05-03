@@ -9,6 +9,7 @@ pub struct Config {
     pub _max_concurrent_requests: usize,
     pub user_agent: String,
     pub scrape_categories: Vec<String>,
+    pub max_pages_per_category: usize,
 }
 
 impl Config {
@@ -35,6 +36,12 @@ impl Config {
             "real-estate".to_string(),
         ];
 
+        // Get max pages from env, default to 5
+        let max_pages_per_category = env::var("MAX_PAGES_PER_CATEGORY")
+            .unwrap_or_else(|_| "5".to_string())
+            .parse()
+            .unwrap_or(5);
+
         Ok(Self {
             phoenix_api_url: env::var("PHOENIX_API_URL")
                 .unwrap_or_else(|_| "http://localhost:5150".to_string()),
@@ -50,6 +57,7 @@ impl Config {
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".to_string()
             }),
             scrape_categories,
+            max_pages_per_category,
         })
     }
 }
