@@ -7,6 +7,7 @@ pub struct CompetitorListing {
     pub price: Decimal,
     pub condition: Option<String>,
     pub platform: String,
+    pub category: Option<String>,
     pub location: Option<String>,
     pub url: String,
 }

@@ -2032,6 +2032,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "governor",
+ "once_cell",
  "reqwest",
  "rust_decimal",
  "scraper",

@@ -2,6 +2,7 @@ use anyhow::Result;
 use tracing_subscriber::{EnvFilter, fmt};
 
 mod analytics;
+mod categories;
 mod clients;
 mod config;
 mod models;
@@ -24,6 +25,7 @@ async fn main() -> Result<()> {
         "Loaded {} categories to scrape",
         config.scrape_categories.len()
     );
+    tracing::info!("Max pages per category: {}", config.max_pages_per_category);
 
     // Initialize Phoenix client
     let phoenix = PhoenixClient::new(&config);
@@ -34,9 +36,18 @@ async fn main() -> Result<()> {
 
     let mut all_competitor_listings = Vec::new();
     let mut total_listings = 0;
+    let mut category_stats: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
 
     for category in &config.scrape_categories {
         tracing::info!("=== Scraping category: {} ===", category);
+
+        // Get mapped category name for Phoenix
+        let phoenix_category = categories::get_phoenix_category(category);
+        match phoenix_category {
+            Some(cat) => tracing::info!("Mapped to Phoenix category: {}", cat),
+            None => tracing::warn!("No mapping found for category: {}", category),
+        }
 
         match scraper.scrape_category_paginated(category, max_pages).await {
             Ok(listings) => {
@@ -48,19 +59,19 @@ async fn main() -> Result<()> {
                             price,
                             condition: l.condition.clone(),
                             platform: "Jiji".to_string(),
+                            category: phoenix_category.map(String::from),
                             location: l.location.clone(),
                             url: l.url.clone(),
                         })
                     })
                     .collect();
 
-                tracing::info!(
-                    "Category {}: scraped {} valid listings",
-                    category,
-                    category_listings.len()
-                );
-                total_listings += category_listings.len();
+                let count = category_listings.len();
+                total_listings += count;
+                category_stats.insert(category.clone(), count);
                 all_competitor_listings.extend(category_listings);
+
+                tracing::info!("Category {}: scraped {} valid listings", category, count);
             }
             Err(e) => {
                 tracing::error!("Failed to scrape category {}: {}", category, e);
@@ -73,8 +84,18 @@ async fn main() -> Result<()> {
         total_listings
     );
 
+    // Log category breakdown
+    tracing::info!("Category breakdown:");
+    for (category, count) in &category_stats {
+        tracing::info!("  {}: {} listings", category, count);
+    }
+
     // Send all competitor listings to Phoenix Mall
     if !all_competitor_listings.is_empty() {
+        tracing::info!(
+            "Sending {} listings to Phoenix Mall...",
+            all_competitor_listings.len()
+        );
         match phoenix.send_batch_intel(all_competitor_listings).await {
             Ok(_) => tracing::info!("All data sent to Phoenix Mall successfully"),
             Err(e) => tracing::error!("Failed to send data to Phoenix Mall: {}", e),
