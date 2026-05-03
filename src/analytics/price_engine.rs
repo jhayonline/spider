@@ -1,6 +1,7 @@
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PriceStatistics {
     pub mean: Decimal,
@@ -11,6 +12,7 @@ pub struct PriceStatistics {
     pub outliers_removed: usize,
 }
 
+#[allow(dead_code)]
 pub struct PriceEngine;
 
 impl PriceEngine {
@@ -47,6 +49,7 @@ impl PriceEngine {
     }
 
     /// Calculate statistics with outlier removal (prices beyond 3 standard deviations)
+    #[allow(dead_code)]
     pub fn calculate_statistics_no_outliers(prices: &[Decimal]) -> Option<PriceStatistics> {
         if prices.is_empty() {
             return None;
@@ -98,6 +101,7 @@ impl PriceEngine {
         Some(filtered_stats)
     }
 
+    #[allow(dead_code)]
     fn decimal_sqrt(decimal: Decimal) -> Decimal {
         let float_val = decimal.to_f64().unwrap_or(0.0);
         let sqrt_val = float_val.sqrt();

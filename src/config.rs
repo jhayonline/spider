@@ -8,11 +8,32 @@ pub struct Config {
     pub _request_delay_ms: u64,
     pub _max_concurrent_requests: usize,
     pub user_agent: String,
+    pub scrape_categories: Vec<String>,
 }
 
 impl Config {
     pub fn from_env() -> anyhow::Result<Self> {
         dotenv().ok();
+
+        let scrape_categories = vec![
+            "mobile-phones".to_string(),
+            "tablets".to_string(),
+            "smart-watches".to_string(),
+            "computers-and-laptops".to_string(),
+            "tv-dvd-equipment".to_string(),
+            "video-games-and-consoles".to_string(),
+            "audio-and-music-equipment".to_string(),
+            "headphones".to_string(),
+            "computer-monitors".to_string(),
+            "computer-hardware".to_string(),
+            "computer-accessories".to_string(),
+            "videogames".to_string(),
+            "mens-fashion".to_string(),
+            "womens-fashion".to_string(),
+            "baby-kids-fashion".to_string(),
+            "cars".to_string(),
+            "real-estate".to_string(),
+        ];
 
         Ok(Self {
             phoenix_api_url: env::var("PHOENIX_API_URL")
@@ -28,6 +49,7 @@ impl Config {
             user_agent: env::var("USER_AGENT").unwrap_or_else(|_| {
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".to_string()
             }),
+            scrape_categories,
         })
     }
 }

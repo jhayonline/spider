@@ -20,65 +20,65 @@ async fn main() -> Result<()> {
 
     // Load configuration
     let config = config::Config::from_env()?;
-    tracing::debug!("Configuration loaded");
+    tracing::info!(
+        "Loaded {} categories to scrape",
+        config.scrape_categories.len()
+    );
 
     // Initialize Phoenix client
     let phoenix = PhoenixClient::new(&config);
 
-    // Scrape Jiji with pagination (3 pages = ~72 listings)
+    // Scrape multiple categories
     let scraper = JijiScraper::new(&config.user_agent);
-    let max_pages = 3;
+    let max_pages = 3; // Pages per category
 
-    tracing::info!("Scraping up to {} pages from Jiji", max_pages);
-    let listings = scraper
-        .scrape_category_paginated("mobile-phones", max_pages)
-        .await?;
+    let mut all_competitor_listings = Vec::new();
+    let mut total_listings = 0;
 
-    tracing::info!("Scraped {} total listings", listings.len());
+    for category in &config.scrape_categories {
+        tracing::info!("=== Scraping category: {} ===", category);
 
-    // Prepare competitor listings for API
-    let competitor_listings: Vec<models::CompetitorListing> = listings
-        .iter()
-        .filter_map(|l| {
-            l.price.map(|price| models::CompetitorListing {
-                product_title: l.title.clone(),
-                price,
-                condition: l.condition.clone(),
-                platform: "Jiji".to_string(),
-                location: l.location.clone(),
-                url: l.url.clone(),
-            })
-        })
-        .collect();
+        match scraper.scrape_category_paginated(category, max_pages).await {
+            Ok(listings) => {
+                let category_listings: Vec<models::CompetitorListing> = listings
+                    .iter()
+                    .filter_map(|l| {
+                        l.price.map(|price| models::CompetitorListing {
+                            product_title: l.title.clone(),
+                            price,
+                            condition: l.condition.clone(),
+                            platform: "Jiji".to_string(),
+                            location: l.location.clone(),
+                            url: l.url.clone(),
+                        })
+                    })
+                    .collect();
 
-    tracing::info!(
-        "Prepared {} competitor listings with prices",
-        competitor_listings.len()
-    );
-
-    // Analyze prices
-    let prices: Vec<rust_decimal::Decimal> = listings.iter().filter_map(|l| l.price).collect();
-
-    if !prices.is_empty() {
-        use analytics::PriceEngine;
-
-        if let Some(stats) = PriceEngine::calculate_statistics_no_outliers(&prices) {
-            tracing::info!("Market Analysis (based on {} listings):", stats.count);
-            tracing::info!("  Average Price: GHS {}", stats.mean.round_dp(2));
-            tracing::info!("  Median Price: GHS {}", stats.median);
-            tracing::info!("  Price Range: GHS {} - GHS {}", stats.min, stats.max);
-            if stats.outliers_removed > 0 {
-                tracing::info!("  Outliers Removed: {}", stats.outliers_removed);
+                tracing::info!(
+                    "Category {}: scraped {} valid listings",
+                    category,
+                    category_listings.len()
+                );
+                total_listings += category_listings.len();
+                all_competitor_listings.extend(category_listings);
             }
-
-            // Send to Phoenix Mall
-            match phoenix.send_batch_intel(competitor_listings).await {
-                Ok(_) => tracing::info!("Data sent to Phoenix Mall successfully"),
-                Err(e) => tracing::error!("Failed to send to Phoenix Mall: {}", e),
+            Err(e) => {
+                tracing::error!("Failed to scrape category {}: {}", category, e);
             }
         }
-    } else {
-        tracing::warn!("No valid prices found in scraped listings");
+    }
+
+    tracing::info!(
+        "Total scraped listings across all categories: {}",
+        total_listings
+    );
+
+    // Send all competitor listings to Phoenix Mall
+    if !all_competitor_listings.is_empty() {
+        match phoenix.send_batch_intel(all_competitor_listings).await {
+            Ok(_) => tracing::info!("All data sent to Phoenix Mall successfully"),
+            Err(e) => tracing::error!("Failed to send data to Phoenix Mall: {}", e),
+        }
     }
 
     tracing::info!("Spider shutdown complete");
