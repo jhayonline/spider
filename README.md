@@ -2,141 +2,189 @@
 
 ## What This Is
 
-Spider is a standalone web scraping and market intelligence service written in Rust. It collects pricing data, product information, and market trends from competitor marketplaces (starting with jiji.com.gh) to provide actionable insights for Phoenix Mall, a multi-vendor online marketplace.
-
-## Problems It Solves
-
-Phoenix Mall sellers face several challenges that Spider addresses:
-
-1. Pricing Blindness - Sellers don't know what similar products sell for on other platforms, leading to overpriced listings that never sell or underpriced listings that leave money on the table.
-
-2. Manual Market Research - Without automation, sellers would need to manually check competitor sites daily to stay competitive.
-
-3. Slow Inventory Turnover - Products priced above market average take longer to sell, reducing platform transaction volume.
-
-4. Seller Churn - Frustrated sellers who can't sell their items may leave the platform permanently.
-
-## How It Contributes to Phoenix Mall
-
-Spider enhances Phoenix Mall in four key ways:
-
-1. Seller Empowerment
-   - Shows sellers real-time market prices for similar items
-   - Provides price recommendations based on actual competitor data
-   - Helps sellers price competitively without guesswork
-
-2. Platform Intelligence
-   - Identifies trending product categories missing from Phoenix Mall
-   - Detects demand signals before competitors do
-   - Informs category expansion decisions
-
-3. Buyer Experience
-   - Competitive pricing across the platform attracts more buyers
-   - Faster listing turnover means fresher inventory
-   - Better deals keep buyers returning
-
-4. Operational Efficiency
-   - Automated market monitoring reduces manual analysis work
-   - Data-driven decisions replace guesswork
-   - Scalable intelligence without headcount growth
+Spider is a standalone web scraping and market intelligence service written in Rust. It collects pricing data from Jiji.com.gh to provide market insights for Phoenix Mall, a multi-vendor online marketplace.
 
 ## How It Works
 
-The scraper operates as a scheduled background service with this workflow:
+1. Scrapes product listings from Jiji.com.gh across 17 categories
+2. Extracts product titles, prices, conditions, and locations
+3. Sends competitor data to Phoenix Mall via API
+4. Phoenix Mall displays price insights to sellers
 
-Phase 1 - Data Collection
+## Categories Scraped
 
-- Fetches product listings from competitor sites using HTTP requests
-- Parses HTML to extract product titles, prices, conditions, and locations
-- Handles pagination to collect complete market data
+- mobile-phones → Smartphones
+- tablets → Tablets
+- smart-watches → Smartwatches
+- computers-and-laptops → Laptops
+- tv-dvd-equipment → Televisions
+- video-games-and-consoles → Video Games
+- audio-and-music-equipment → Audio Equipment
+- headphones → Headphones
+- computer-monitors → Monitors
+- computer-hardware → Computer Components
+- computer-accessories → Computer Accessories
+- videogames → Video Games
+- mens-fashion → Men's Fashion
+- womens-fashion → Women's Fashion
+- baby-kids-fashion → Kids' Fashion
+- cars → Cars
+- real-estate → Real Estate
 
-Phase 2 - Analysis
+## Performance
 
-- Maps competitor products to Phoenix Mall categories
-- Calculates market averages, percentiles, and price distributions
-- Detects outliers, trends, and demand signals
+| Metric             | Value            |
+| ------------------ | ---------------- |
+| Categories         | 17               |
+| Pages per category | 5 (configurable) |
+| Listings per run   | ~2,040           |
+| Scraping time      | ~2.5-3 minutes   |
+| Upload time        | ~1.5 minutes     |
+| Total runtime      | ~4-5 minutes     |
 
-Phase 3 - Intelligence Delivery
+## Setup
 
-- Compares seller prices against market data
-- Generates price recommendations using statistical analysis
-- Pushes insights to Phoenix Mall via its existing API
-- Creates notifications for sellers when price adjustments are needed
+### Prerequisites
 
-Phase 4 - Continuous Learning
+- Rust 1.70+
+- Phoenix Mall backend running
 
-- Stores market intelligence in Phoenix Mall database
-- Tracks price trends over time
-- Improves recommendation accuracy with historical data
+### Getting the Phoenix API Token
 
-## Architecture
+1. Access your Phoenix Mall database:
 
-The scraper is intentionally decoupled from Phoenix Mall, running as an independent binary. This provides:
-
-- Isolation - Scraper crashes don't affect marketplace operations
-- Independent scaling - Can run on different schedules or hardware
-- Clean dependencies - No framework overhead for a scheduled job
-- Simple deployment - Single binary run by cron or systemd timer
-
-## Directory Structure Explained
-
-```text
-src/
-├── analytics/             # Market analysis and intelligence generation
-│   ├── mod.rs             # Module exports and public interface
-│   ├── price_engine.rs    # Statistical price analysis, market averages, percentile calculations
-│   └── recommendations.rs # Seller-facing recommendations and insight formatting
-│
-├── clients/               # External service integrations
-│   ├── mod.rs             # Client module exports
-│   ├── jiji.rs            # Jiji.com.gh scraper - HTML parsing, pagination, data extraction
-│   └── phoenix.rs         # Phoenix Mall API client - authentication, product fetching, notification sending
-│
-├── config.rs              # Configuration management - environment variables, API keys, schedules
-│
-├── main.rs                # Orchestrator - ties everything together, runs the scraping workflow
-│
-└── models/                # Data structures shared across the system
-    ├── mod.rs             # Model exports
-    ├── competitor.rs      # CompetitorPrice struct - represents scraped product data
-    └── intel.rs           # MarketIntel struct - represents analyzed insights and recommendations
+```bash
+psql -U postgres -d phoenix
 ```
 
-## Data Flow
+1. Create a service account for the scraper:
 
-1. Config loads environment variables (API keys, URLs, schedules)
-2. Main orchestrator authenticates with Phoenix Mall
-3. Client fetches active product listings from Phoenix Mall
-4. For each product, competitor data is scraped from external sites
-5. Price engine analyzes market data and generates intelligence
-6. Recommendations are formatted and sent back to Phoenix Mall via API
-7. Phoenix Mall creates notifications for affected sellers
+```sql
+INSERT INTO users (
+    pid, email, password, api_key, name, role, is_active, email_verified_at, created_at, updated_at
+) VALUES (
+    gen_random_uuid(),
+    'scraper@phoenixmall.com',
+    'service_account_no_password',
+    'scraper_' || gen_random_uuid(),
+    'Market Intelligence Scraper',
+    'admin',
+    true,
+    NOW(),
+    NOW(),
+    NOW()
+);
+```
 
-## Technology Stack
+1. Get the API key:
 
-- Rust - Memory-safe, high-performance systems language
-- Reqwest - HTTP client with cookie and gzip support
-- Scraper - HTML parsing and CSS selector extraction
-- Tokio - Async runtime for concurrent scraping
-- Serde - Serialization for Phoenix Mall API communication
-- Chrono - Date/time handling for price trends
-- Rust Decimal - Precise currency calculations
+```sql
+SELECT api_key FROM users WHERE email = 'scraper@phoenixmall.com';
+```
 
-## Planned Competitor Support
+The API key will look like: `scraper_21160b44-a380-4f6d-8e34-a29a3bb81e8e`
 
-- Phase 1 - Jiji.com.gh (primary Ghana marketplace)
-- Phase 2 - Tonaton.com (secondary Ghana marketplace)
-- Phase 3 - OLX (regional marketplace)
-- Phase 4 - Facebook Marketplace (social commerce)
+### Installation
 
-## Contribution to Phoenix Mall's Bottom Line
+```bash
+git clone git@github.com:jhayonline/spider.git
+cd spider
+cp .env.example .env
+```
 
-By helping sellers price competitively, Spider directly impacts:
+### Configuration
 
-- Higher transaction velocity (faster sales)
-- Increased platform trust (fair prices)
-- Reduced abandoned listings (priced to sell)
-- Improved seller retention (successful sales)
-- Better buyer value perception (competitive marketplace)
+Update `.env` file with your values:
 
-The intelligence gathered also guides strategic decisions about which new categories to add, where demand is growing, and how Phoenix Mall should position itself against competitors.
+```bash
+PHOENIX_API_URL=http://localhost:5150
+PHOENIX_API_TOKEN=scraper_21160b44-a380-4f6d-8e34-a29a3bb81e8e
+MAX_PAGES_PER_CATEGORY=5
+```
+
+### Run
+
+```bash
+cargo build --release
+cargo run
+```
+
+## Directory Structure
+
+```
+src/
+├── analytics/price_engine.rs    # Statistical analysis
+├── categories.rs                # Category mapping
+├── clients/
+│   ├── jiji.rs                  # Jiji scraper
+│   └── phoenix.rs               # Phoenix Mall API client
+├── config.rs                    # Configuration
+├── main.rs                      # Orchestrator
+└── models/competitor.rs         # Data structures
+```
+
+## Systemd Deployment
+
+Create `/etc/systemd/system/spider.service`:
+
+```ini
+[Unit]
+Description=Spider Market Intelligence Scraper
+After=network.target
+
+[Service]
+Type=oneshot
+User=your-user
+WorkingDirectory=/path/to/spider
+ExecStart=/path/to/spider/target/release/spider
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create `/etc/systemd/system/spider.timer`:
+
+```ini
+[Unit]
+Description=Run Spider every 6 hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable spider.timer
+sudo systemctl start spider.timer
+```
+
+## Check Logs
+
+```bash
+# View latest run
+sudo journalctl -u spider.service -n 50
+
+# Follow live
+sudo journalctl -u spider.service -f
+
+# Check timer status
+sudo systemctl status spider.timer
+```
+
+## Technology
+
+- Rust
+- Reqwest (HTTP client)
+- Scraper (HTML parsing)
+- Tokio (async runtime)
+- Serde (serialization)
+
+```
+
+```
