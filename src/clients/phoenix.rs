@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use crate::config::Config;
 use crate::models::CompetitorListing;
 use anyhow::Result;

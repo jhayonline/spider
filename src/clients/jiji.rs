@@ -77,7 +77,7 @@ impl JijiScraper {
             tracing::info!("Page {}: scraped {} listings", page, page_listings.len());
             all_listings.extend(page_listings);
 
-            // Be nice to the server - delay between pages
+            // delay between pages
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         }
 

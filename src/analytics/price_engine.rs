@@ -1,3 +1,5 @@
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::manual_range_contains)]
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 
