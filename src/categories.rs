@@ -41,6 +41,7 @@ pub static CATEGORY_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
 });
 
 // Phoenix Mall category IDs (from your database)
+#[allow(dead_code)]
 pub static PHOENIX_CATEGORY_IDS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     HashMap::from([
         ("Smartphones", "00000000-0000-0000-0000-000000000013"),
@@ -81,6 +82,7 @@ pub fn get_phoenix_category(jiji_category: &str) -> Option<&'static str> {
     CATEGORY_MAP.get(jiji_category).copied()
 }
 
+#[allow(dead_code)]
 pub fn get_phoenix_category_id(jiji_category: &str) -> Option<&'static str> {
     let category_name = CATEGORY_MAP.get(jiji_category)?;
     PHOENIX_CATEGORY_IDS.get(category_name).copied()

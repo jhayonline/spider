@@ -30,14 +30,13 @@ async fn main() -> Result<()> {
     // Initialize Phoenix client
     let phoenix = PhoenixClient::new(&config);
 
-    // Scrape multiple categories
+    // Scrape categories sequentially (simpler and avoids Send issues)
     let scraper = JijiScraper::new(&config.user_agent);
     let max_pages = config.max_pages_per_category;
 
     let mut all_competitor_listings = Vec::new();
     let mut total_listings = 0;
-    let mut category_stats: std::collections::HashMap<String, usize> =
-        std::collections::HashMap::new();
+    let mut category_stats = std::collections::HashMap::new();
 
     for category in &config.scrape_categories {
         tracing::info!("=== Scraping category: {} ===", category);
@@ -48,6 +47,8 @@ async fn main() -> Result<()> {
             Some(cat) => tracing::info!("Mapped to Phoenix category: {}", cat),
             None => tracing::warn!("No mapping found for category: {}", category),
         }
+
+        let start = std::time::Instant::now();
 
         match scraper.scrape_category_paginated(category, max_pages).await {
             Ok(listings) => {
@@ -67,11 +68,17 @@ async fn main() -> Result<()> {
                     .collect();
 
                 let count = category_listings.len();
+                let elapsed = start.elapsed();
                 total_listings += count;
                 category_stats.insert(category.clone(), count);
                 all_competitor_listings.extend(category_listings);
 
-                tracing::info!("Category {}: scraped {} valid listings", category, count);
+                tracing::info!(
+                    "Category {}: scraped {} valid listings in {:.2}s",
+                    category,
+                    count,
+                    elapsed.as_secs_f64()
+                );
             }
             Err(e) => {
                 tracing::error!("Failed to scrape category {}: {}", category, e);
@@ -92,12 +99,20 @@ async fn main() -> Result<()> {
 
     // Send all competitor listings to Phoenix Mall
     if !all_competitor_listings.is_empty() {
+        let start = std::time::Instant::now();
         tracing::info!(
             "Sending {} listings to Phoenix Mall...",
             all_competitor_listings.len()
         );
+
         match phoenix.send_batch_intel(all_competitor_listings).await {
-            Ok(_) => tracing::info!("All data sent to Phoenix Mall successfully"),
+            Ok(_) => {
+                let elapsed = start.elapsed();
+                tracing::info!(
+                    "All data sent to Phoenix Mall successfully in {:.2}s",
+                    elapsed.as_secs_f64()
+                );
+            }
             Err(e) => tracing::error!("Failed to send data to Phoenix Mall: {}", e),
         }
     }

@@ -10,6 +10,7 @@ pub struct Config {
     pub user_agent: String,
     pub scrape_categories: Vec<String>,
     pub max_pages_per_category: usize,
+    pub max_concurrent_categories: usize,
 }
 
 impl Config {
@@ -42,6 +43,11 @@ impl Config {
             .parse()
             .unwrap_or(5);
 
+        let max_concurrent_categories = env::var("MAX_CONCURRENT_CATEGORIES")
+            .unwrap_or_else(|_| "3".to_string())
+            .parse()
+            .unwrap_or(3);
+
         Ok(Self {
             phoenix_api_url: env::var("PHOENIX_API_URL")
                 .unwrap_or_else(|_| "http://localhost:5150".to_string()),
@@ -58,6 +64,7 @@ impl Config {
             }),
             scrape_categories,
             max_pages_per_category,
+            max_concurrent_categories,
         })
     }
 }
